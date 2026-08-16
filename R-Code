@@ -1,0 +1,59 @@
+# 1. Load Required Libraries
+library(readxl)
+library(forecast)
+library(writexl)
+library(ggplot2) # Required for the plot
+
+# 2. Load the Historical Data
+# IMPORTANT: Update "Your_LST_File.xlsx" to the exact name of your historical data file
+df <- read_excel("E:/8th Semester/Research/Thesis Result/Data/Pre 2000 Night time LST.xlsx")
+
+# 3. Convert Data to a Time Series Object
+ts_data <- ts(df$Mean_LST, start = min(df$Year), frequency = 1)
+
+# 4. Run Model & Forecast
+model_ets <- ets(ts_data)
+forecast_ets <- forecast(model_ets, h = 15, level = 95)
+
+# 5. Generate the Publication-Ready Plot
+forecast_plot <- autoplot(forecast_ets) +
+  labs(title = "ETS Forecast of Summer Nighttime Mean LST of the Phase I Urbanized Area to 2040",
+       subtitle = "Including 95% Confidence Interval (Margin of Error)",
+       x = "Year",
+       y = "Mean LST (°C)") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        axis.title = element_text(face = "bold"),
+        plot.background = element_rect(fill = "white", color = NA),
+        panel.background = element_rect(fill = "white", color = NA),
+        panel.grid.minor = element_blank())
+
+# Display the plot in RStudio
+print(forecast_plot)
+
+# Save the plot to your Data folder
+plot_path <- "E:/8th Semester/Research/Thesis Result/Data/ETS_Forecast_Plot.png"
+ggsave(filename = plot_path, plot = forecast_plot, width = 8, height = 5, dpi = 300)
+
+# 6. Extract Data & Calculate Standard Error for Excel
+predicted_years <- seq(2026, 2040)
+point_forecast <- as.numeric(forecast_ets$mean)
+lo_95 <- as.numeric(forecast_ets$lower)
+hi_95 <- as.numeric(forecast_ets$upper)
+
+standard_error <- (hi_95 - point_forecast) / 1.96
+
+# 7. Create and Export the Excel File
+results_df <- data.frame(
+  Year = predicted_years,
+  Mean_LST = point_forecast,
+  Standard_Error = standard_error,
+  Lo_95_CI = lo_95,
+  Hi_95_CI = hi_95,
+  Category = "Forecast"
+)
+
+export_path <- "E:/8th Semester/Research/Thesis Result/Data/Pre2000_LST_ETS_Forecast_2040.xlsx"
+write_xlsx(results_df, export_path)
+
+print("Forecast Excel and Plot successfully generated.")
